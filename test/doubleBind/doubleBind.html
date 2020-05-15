@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>双向数据绑定</title>
+</head>
+<body>
+    <div id="el">
+        <input type="text" name="firstName"> <br>
+        <input type="text" name="lastName"> <br>
+        <input type="number" name="age"> <br>
+        <button id="btn">修改</button>
+    </div>
+</body>
+
+<script>
+    var obj = {                 // 就像vue里面的data
+        firstName: '',
+        lastName: '',
+        age: 0
+    }
+
+    // 用Proxy进行数据劫持
+    var proxy = new Proxy(obj, {
+        set: function(target, property, value, receiver) {
+            console.log(`修改${property}属性，更改为${value}`)
+            setElementValue(property, value);
+            Reflect.set(target, property, value, receiver);
+        },
+        get: function(target, property, receiver) {
+            console.log(`获取${property}属性`)
+            Reflect.get(target, property, receiver)
+        }
+    });
+
+    var btn = document.getElementById('btn');
+    btn.addEventListener('click', function(ev) {
+        console.log(obj)
+        asyncEvent();
+    });
+
+    var el = document.getElementById('el');
+    // 事件代理
+    el.addEventListener('input', function(ev) {
+        proxy[ev.target.name] = ev.target.value
+    })
+
+    asyncEvent();
+
+    // model的值改变的时候更改
+    function setElementValue(property, value) {
+        var elementItem = getElementNode(el.children, property);
+        if (elementItem) {
+            elementItem.value = value;
+        } else {
+            throw new Error('不存在该节点')
+        }
+    }
+
+    // 获取应该改变值的节点，可以进一步优化
+    function getElementNode(elementList, property) {
+        var resultElement = null;
+        for (let i = 0; i < elementList.length; i++) {
+            if (elementList[i].name === property) {
+                resultElement = elementList[i];
+                break;
+            }
+            if (elementList[i].children && elementList[i].children.length) {
+                resultElement = getElementNode(elementList[i].children)
+                if (resultElement) {
+                    break;
+                }
+            }
+        }
+        return resultElement;
+    }
+
+    // 模拟异步请求事件 value改变 
+    function asyncEvent() {
+        setTimeout(function() {
+        proxy.age = Math.random() * 100;
+    }, 5 * 1000);
+
+    }
+
+
+</script>
+
+
+</html>
